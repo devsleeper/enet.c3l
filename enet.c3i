@@ -1,0 +1,663 @@
+module enet;
+
+
+// ###############################################################
+//                     --- public api ---
+// ###############################################################
+
+alias ENet_uint8                 = char;
+alias ENet_uint16                = ushort;
+alias ENet_uint32                = uint;
+alias ENet_uint64                = ulong;
+
+alias ENetSocket                 = int;
+alias ENetVersion                = ENet_uint32;
+alias In6Addr                    = char[16]; 
+
+const In6Addr V4_ANYADDR      = x"00 00 00 00 00 00 00 00 00 00 ff ff 00 00 00 00";
+const In6Addr V4_NOADDR       = x"00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff ff";
+const In6Addr V4_LOCALHOST    = x"00 00 00 00 00 00 00 00 00 00 ff ff 7f 00 00 01";
+const In6Addr V6_ANYADDR      = x"00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00";
+const In6Addr V6_NOADDR       = x"ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff";
+const In6Addr V6_LOCALHOST    = x"00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01";
+
+const IPV6           = 1;
+const HOST_ANY       = V6_ANYADDR;
+const HOST_BROADCAST = 0xFFFFFFFF;
+
+const PORT_ANY       = 0;
+const USE_MORE_PEERS = false;
+const BUFFER_MAXIMUM = (1 + 2 * PROTOCOL_MAXIMUM_PACKET_COMMANDS);
+
+alias ENetMallocCallback        = fn void*(usz size);
+alias ENetFreeCallback          = fn void (void* memory);
+alias ENetNoMemoryCallback      = fn void ();
+alias ENetPacketCreateCallback  = fn ENetPacket* (void* data, usz dataLength, ENet_uint32 flags);
+alias ENetPacketDestroyCallback = fn void (ENetPacket* packet);
+
+alias ENetChecksumCallback      = fn ENet_uint32 (ENetBuffer* buffers, usz bufferCount);
+alias ENetInterceptCallback     = fn int (ENetHost* host, void* event);
+alias ENetPacketFreeCallback    = fn void (void* callback);
+
+struct ENetCallbacks {
+    ENetMallocCallback        * malloc;
+    ENetFreeCallback          * free;
+    ENetNoMemoryCallback      * no_memory;
+    ENetPacketCreateCallback  * packet_create;
+    ENetPacketDestroyCallback * packet_destroy;
+}
+
+fn void* malloc             (usz size)                                @extern("enet_malloc");
+fn void free                (void * memory)                           @extern("enet_free");
+fn ENetPacket* packet_create(void* data,usz length,ENet_uint32 flags) @extern("enet_packet_create");
+fn ENetPacket* packet_resize(ENetPacket* packet, usz dataLength)      @extern("enet_packet_resize");
+fn ENetPacket* packet_copy  (ENetPacket* packet)                      @extern("enet_packet_copy");
+fn void packet_destroy      (ENetPacket* packet)                      @extern("enet_packet_destroy");
+
+
+// ###############################################################
+//                     --- public api ---
+// ###############################################################
+
+fn int initialize()                                                          @extern("enet_initialize");
+fn int initialize_with_callbacks(ENetVersion version, ENetCallbacks * inits) @extern("enet_initialize_with_callbacks");
+fn void deinitialize()                                                       @extern("enet_deinitialize");
+fn ENetVersion linked_version()                                              @extern("enet_linked_version");
+fn ENet_uint32 time_get()                                                    @extern("enet_time_get");
+
+
+fn ENetSocket socket_create(ENetSocketType type)                                                             @extern("enet_socket_create");
+fn int socket_bind         (ENetSocket socket, ENetAddress * address)                                        @extern("enet_socket_bind"); 
+fn int socket_get_address  (ENetSocket socket, ENetAddress * address)                                        @extern("enet_socket_get_address");
+fn int socket_listen       (ENetSocket socket, int backlog)                                                  @extern("enet_socket_listen");
+fn ENetSocket socket_accept(ENetSocket socket, ENetAddress * address)                                        @extern("enet_socket_accept");
+fn int socket_connect      (ENetSocket socket, ENetAddress * address)                                        @extern("enet_socket_connect");
+fn int socket_send         (ENetSocket socket, ENetAddress * address,  ENetBuffer* buffers, usz bufferCount) @extern("enet_socket_send");
+fn int socket_receive      (ENetSocket socket, ENetAddress * address,  ENetBuffer*, usz bufferCount)         @extern("enet_socket_receive");
+fn int socket_wait         (ENetSocket socket, ENet_uint32 * condition,ENet_uint64 timeout)                  @extern("enet_socket_wait");
+fn int socket_set_option   (ENetSocket socket, ENetSocketOption option, int value)                           @extern("enet_socket_set_option");
+fn int socket_get_option   (ENetSocket socket, ENetSocketOption option, int * value)                         @extern("enet_socket_get_option");
+fn int socket_shutdown     (ENetSocket socket, ENetSocketShutdown how)                                       @extern("enet_socket_shutdown");
+fn void socket_destroy     (ENetSocket socket)                                                               @extern("enet_socket_destroy");
+
+fn int address_set_host_ip_new     (ENetAddress * address, char* hostName)                 @extern("enet_address_set_host_ip_new");
+fn int address_get_host_ip_new     (ENetAddress * address, char* hostName, usz nameLength) @extern("enet_address_get_host_ip_new");
+fn int address_set_host_new        (ENetAddress * address, char* hostName)                 @extern("enet_address_set_host_new");
+fn int address_get_host_new        (ENetAddress * address, char* hostName, usz nameLength) @extern("enet_address_get_host_new");
+fn int address_set_hosts_ip_old    (ENetAddress * address, char* hostName)                 @extern("enet_address_set_hosts_ip_old");
+fn int address_get_host_ip_old     (ENetAddress * address, char* hostName, usz nameLength) @extern("enet_address_get_host_ip_old");
+fn int address_set_host_old        (ENetAddress * address, char* hostName)                 @extern("enet_address_set_host_old");
+fn int address_get_host_old        (ENetAddress * address, char* hostName, usz nameLength) @extern("enet_address_get_host_old");
+
+fn ENet_uint32 host_get_peers_count     (ENetHost * host)                    @extern("enet_host_get_peers_count");
+fn ENet_uint32 host_get_packets_sent    (ENetHost * host)                    @extern("enet_host_get_packets_sent");
+fn ENet_uint32 host_get_packets_received(ENetHost * host)                    @extern("enet_host_get_packets_received");
+fn ENet_uint32 host_get_bytes_sent      (ENetHost * host)                    @extern("enet_host_get_bytes_sent");
+fn ENet_uint32 host_get_bytes_received  (ENetHost * host)                    @extern("enet_host_get_bytes_received");
+fn ENet_uint32 host_get_received_data   (ENetHost * host, ENet_uint8** data) @extern("enet_host_get_received_data");
+fn ENet_uint32 host_get_mtu             (ENetHost * host)                    @extern("enet_host_get_mtu");
+fn ENetHost * host_create      (ENetAddress * address, usz peerCount, usz channelLimit, ENet_uint32 incomingBandwidth, ENet_uint32 outgoingBandwidth) @extern("enet_host_create");
+fn void host_destroy           (ENetHost * host)                                                                @extern("enet_host_destroy");
+fn ENetPeer * host_connect     (ENetHost * host, ENetAddress * address, usz channelCount, ENet_uint32 data)     @extern("enet_host_connect");
+fn int host_check_events       (ENetHost * host, ENetEvent * event)                                             @extern("enet_host_check_events");
+fn int host_service            (ENetHost * host, ENetEvent * event, ENet_uint32 timeout)                        @extern("enet_host_service");
+fn int host_send_raw           (ENetHost * host, ENetAddress * address, ENet_uint8 * data, usz dataLength)      @extern("enet_host_send_raw");
+fn int host_send_raw_ex        (ENetHost * host, ENetAddress * address, ENet_uint8 * data, usz dataLength, usz bytesToSend) @extern("enet_host_send_raw_ex");
+fn void host_set_intercept     (ENetHost * host, ENetInterceptCallback callback)                                @extern("enet_host_set_intercept");
+fn void host_flush             (ENetHost * host)                                                                @extern("enet_host_flush");
+fn void host_broadcast         (ENetHost * host, ENet_uint8 channelID, ENetPacket * packet)                     @extern("enet_host_broadcast");
+fn void host_compress          (ENetHost * host, ENetCompressor * compressor)                                   @extern("enet_host_compress");
+fn void host_channel_limit     (ENetHost * host, usz channelLimit)                                              @extern("enet_host_channel_limit");
+fn void host_bandwidth_limit   (ENetHost * host, ENet_uint32 incomingBandwidth, ENet_uint32 outgoingBandwidth)  @extern("enet_host_bandwidth_limit");
+fn void host_bandwidth_throttle(ENetHost * host)                                                                @extern("enet_host_bandwidth_throttle");
+fn ENet_uint64 host_random_seed()                                                                               @extern("enet_host_random_seed");
+fn ENet_uint32 host_random     (ENetHost * host)                                                                @extern("enet_host_random");
+
+fn ENet_uint32 peer_get_id             (ENetPeer * peer)                           @extern("enet_peer_get_id");
+fn ENet_uint32 peer_get_ip             (ENetPeer * peer, char* ip, usz ipLength)   @extern("enet_peer_get_ip");
+fn ENet_uint16 peer_get_port           (ENetPeer * peer)                           @extern("enet_get_port");
+fn ENet_uint32 peer_get_rtt            (ENetPeer * peer)                           @extern("enet_peer_get_rtt");
+fn ENet_uint64 peer_get_packets_sent   (ENetPeer * peer)                           @extern("peer_get_packets_sent");
+fn ENet_uint32 peer_get_packets_lost   (ENetPeer * peer)                           @extern("peer_get_packets_lost");
+fn ENet_uint64 peer_get_bytes_sent     (ENetPeer * peer)                           @extern("peer_get_bytes_sent");
+fn ENet_uint64 peer_get_bytes_received (ENetPeer * peer)                           @extern("peer_get_bytes_received");
+fn ENetPeerState peer_get_state        (ENetPeer * peer)                           @extern("enet_peer_get_state");
+fn void*       peer_get_data           (ENetPeer * peer)                           @extern("enet_peer_get_data");
+fn void        peer_set_data           (ENetPeer * peer, void* data)               @extern("enet_peer_set_data");
+
+fn int peer_send               (ENetPeer * peer, ENet_uint8 channelID, ENetPacket * packet)                                @extern("enet_peer_send");
+fn ENetPacket * peer_receive   (ENetPeer * peer, ENet_uint8 * channelID)                                                   @extern("enet_peer_receive");
+fn void peer_ping              (ENetPeer * peer)                                                                           @extern("enet_peer_ping");
+fn void peer_ping_interval     (ENetPeer * peer, ENet_uint32 pingInterval)                                                 @extern("enet_peer_ping_interval");
+fn void peer_timeout           (ENetPeer * peer, ENet_uint32 timeoutLimit, ENet_uint32 timeoutMin, ENet_uint32 timeoutMax) @extern("enet_peer_timeout");
+fn void peer_reset             (ENetPeer * peer)                                                                           @extern("enet_peer_reset");
+fn void peer_disconnect        (ENetPeer * peer, ENet_uint32 data)                                                         @extern("enet_peer_disconnect");
+fn void peer_disconnect_now    (ENetPeer * peer, ENet_uint32 data)                                                         @extern("enet_peer_disconnect_now");
+fn void peer_disconnect_later  (ENetPeer * peer, ENet_uint32 data)                                                         @extern("enet_peer_disconnect_later");
+fn void peer_throttle_configure(ENetPeer * peer, ENet_uint32 interval, ENet_uint32 acceleration, ENet_uint32 deceleration) @extern("enet_peer_throttle_configure");
+fn int peer_throttle                                (ENetPeer * peer, ENet_uint32 rtt)               @extern("enet_peer_throttle");
+fn void peer_reset_queues                           (ENetPeer * peer)                                @extern("enet_peer_reset_queues");
+fn int peer_has_outgoing_commands                   (ENetPeer * peer)                                @extern("enet_peer_has_outgoing_commands");
+fn void peer_setup_outgoing_command                 (ENetPeer * peer, ENetOutgoingCommand * command) @extern("enet_peer_setup_outgoing_command");
+fn ENetOutgoingCommand * peer_queue_outgoing_command(ENetPeer * peer, ENetProtocol * command, ENetPacket * packet, ENet_uint32 offset, ENet_uint16 len) @extern("enet_peer_queue_outgoing_command");
+fn ENetIncomingCommand * peer_queue_incoming_command(ENetPeer * peer, ENetProtocol * command, void * data, usz dataLength, ENet_uint32 flags, ENet_uint32 fragmentCount) @extern("enet_peer_queue_incoming_command");
+fn ENetAcknowledgement * peer_queue_acknowledgement (ENetPeer * peer, ENetProtocol * command, ENet_uint16 sentTime) @extern("enet_peer_queue_acknowledgement");
+fn void peer_dispatch_incoming_unreliable_commands  (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("peer_dispatch_incoming_unreliable_commands");
+fn void peer_dispatch_incoming_reliable_commands    (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("enet_peer_dispatch_incoming_reliable_commands");
+fn void peer_on_connect                             (ENetPeer * peer) @extern("enet_peer_on_connect");
+fn void peer_on_disconnect                          (ENetPeer * peer) @extern("enet_peer_on_disconnect");
+
+fn usz protocol_command_size                        (ENet_uint8 commandNumber) @extern("enet_protocol_command_size");
+
+fn void*       packet_get_data         (ENetPacket * packet)                                           @extern("enet_packet_get_data");
+fn ENet_uint32 packet_get_length       (ENetPacket * packet)                                           @extern("enet_packet_get_length");
+fn void        packet_set_free_callback(ENetPacket * packet, void* callback)                           @extern("enet_packet_set_free_callback");
+fn ENetPacket * packet_create_offset   (void* data, usz dataLength, usz dataOffset, ENet_uint32 flags) @extern("enet_packet_create_offset");
+fn ENet_uint32 crc32                   (ENetBuffer * buffers, usz bufferCount)                         @extern("enet_crc32");
+
+
+// ###############################################################
+//                     --- socket ---
+// ###############################################################
+
+enum ENetSocketType : const int {
+    SOCKET_TYPE_STREAM   = 1,
+    SOCKET_TYPE_DATAGRAM = 2
+}
+
+enum ENetSocketWait : const int {
+    SOCKET_WAIT_NONE      = 0,
+    SOCKET_WAIT_SEND      = (1 << 0),
+    SOCKET_WAIT_RECEIVE   = (1 << 1),
+    SOCKET_WAIT_INTERRUPT = (1 << 2)
+}
+
+enum ENetSocketOption : const int {
+    SOCKOPT_NONBLOCK       = 1,
+    SOCKOPT_BROADCAST      = 2,
+    SOCKOPT_RCVBUF         = 3,
+    SOCKOPT_SNDBUF         = 4,
+    SOCKOPT_REUSEADDR      = 5,
+    SOCKOPT_RCVTIMEO       = 6,
+    SOCKOPT_SNDTIMEO       = 7,
+    SOCKOPT_ERROR          = 8,
+    SOCKOPT_NODELAY        = 9,
+    SOCKOPT_IPV6_V6ONLY    = 10,
+    SOCKOPT_TTL            = 11,
+}
+
+enum ENetSocketShutdown : const int {
+    SOCKET_SHUTDOWN_READ       = 0,
+    SOCKET_SHUTDOWN_WRITE      = 1,
+    SOCKET_SHUTDOWN_READ_WRITE = 2
+} 
+
+
+// ###############################################################
+//                     --- events ---
+// ###############################################################
+enum ENetEventType : const int {
+        EVENT_TYPE_NONE               = 0,
+        EVENT_TYPE_CONNECT            = 1,
+        EVENT_TYPE_DISCONNECT         = 2,
+        EVENT_TYPE_RECEIVE            = 3,
+        EVENT_TYPE_DISCONNECT_TIMEOUT = 4,
+}
+
+struct ENetEvent {
+    ENetEventType   type;
+    ENetPeer   *    peer;
+    ENet_uint8      channelID;
+    ENet_uint32     data;
+    ENetPacket *    packet;
+}
+
+struct ENetBuffer {
+    void*   data;
+    usz     dataLength;
+}
+ 
+struct ENetAddress @packed {
+    In6Addr      host;
+    ENet_uint16  port;
+    ENet_uint32  sin6_scope_id;
+}
+
+
+// ###############################################################
+//                     --- compressor ---
+// ###############################################################
+alias ENetCompressCallback = fn usz (
+    void *       context,
+    ENetBuffer * inBuffers,
+    usz          inBufferCount,
+    usz          inLimit,
+    ENet_uint8 * outData,
+    usz          outLimit
+);
+
+alias ENetDecompressCallback = fn usz (
+    void *       context,
+    ENet_uint8 * inData,
+    usz          inLimit,
+    ENet_uint8 * outData,
+    usz          outLimit
+);
+
+alias ENetDestroyCallback = fn void (void * context);
+
+struct ENetCompressor {
+    void*                    context;
+    ENetCompressCallback   * compress;
+    ENetDecompressCallback * decompress;
+    ENetDestroyCallback    * destroy;
+}
+
+
+// ###############################################################
+//                     --- list ---
+// ###############################################################
+struct ENetList {
+    ENetListNode sentinel;
+}
+
+struct ENetListNode {
+    ENetListNode * next;
+    ENetListNode * previous;
+}
+
+typedef ENetListIterator = ENetListNode*;
+
+fn ENetListIterator list_insert(ENetListIterator position, void * item);
+fn ENetListIterator list_move(ENetListIterator   position, void * item, void * old_position);
+
+fn void* list_remove(ENetListIterator position);
+fn void list_clear(ENetList * list);
+fn usz list_size(ENetList   * list);
+
+
+// ###############################################################
+//                     --- protocol ---
+// ###############################################################
+const PROTOCOL_MINIMUM_MTU             = 576;
+const PROTOCOL_MAXIMUM_MTU             = 4096;
+const PROTOCOL_MAXIMUM_PACKET_COMMANDS = 32;
+const PROTOCOL_MINIMUM_WINDOW_SIZE     = 4096;
+const PROTOCOL_MAXIMUM_WINDOW_SIZE     = 65536;
+const PROTOCOL_MINIMUM_CHANNEL_COUNT   = 1;
+const PROTOCOL_MAXIMUM_CHANNEL_COUNT   = 255;
+const PROTOCOL_MAXIMUM_FRAGMENT_COUNT  = 1024 * 1024;
+
+module enet @private;
+const ulong MAX_PEER_ID_EXTRA   = 0xFFFF;
+const ulong MAX_PEER_ID_DEFAULT = 0xFFF;
+module enet @public; 
+
+alias MAXIMUM_PEER_ID @if (USE_MORE_PEERS)  = MAX_PEER_ID_EXTENDED;
+alias MAXIMUM_PEER_ID @if (!USE_MORE_PEERS) = MAX_PEER_ID_DEFAULT;
+
+// todo: no define but maybe use $feature ?
+module enet @if(USE_MORE_PEERS);
+enum ENetProtocolFlag : const uint {
+
+    PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE  = (1 << 7),
+    PROTOCOL_COMMAND_FLAG_UNSEQUENCED  = (1 << 6),
+
+    PROTOCOL_HEADER_FLAG_PEER_EXTRA   = (1 << 13),
+    PROTOCOL_HEADER_FLAG_COMPRESSED   = (1 << 14),
+    PROTOCOL_HEADER_FLAG_SENT_TIME    = (1 << 15),
+    PROTOCOL_HEADER_FLAG_MASK         = PROTOCOL_HEADER_FLAG_PEER_EXTRA | 
+                                        PROTOCOL_HEADER_FLAG_COMPRESSED | 
+                                        PROTOCOL_HEADER_FLAG_SENT_TIME,
+    PROTOCOL_HEADER_SESSION_MASK      = (3 << 11),
+    PROTOCOL_HEADER_SESSION_SHIFT     = 11
+
+}
+
+module enet @if(!USE_MORE_PEERS);
+enum ENetProtocolFlag : const uint  {
+
+    PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE  = (1 << 7),
+    PROTOCOL_COMMAND_FLAG_UNSEQUENCED  = (1 << 6),
+
+    PROTOCOL_HEADER_FLAG_COMPRESSED   = (1 << 14),
+    PROTOCOL_HEADER_FLAG_SENT_TIME    = (1 << 15),
+    PROTOCOL_HEADER_FLAG_MASK         = (1 << 14) | 
+                                        (1 << 15),
+    PROTOCOL_HEADER_SESSION_MASK      = (3 << 12),
+    PROTOCOL_HEADER_SESSION_SHIFT     = 12
+
+}
+module enet;
+
+
+struct ENetProtocolHeader @packed {
+    ENet_uint16 peerID;
+    ENet_uint16 sentTime;
+}
+
+struct ENetProtocolHeaderMinimal @packed {
+    ENet_uint16 peerID;
+}
+
+struct ENetProtocolCommandHeader @packed {
+    ENet_uint8 command;
+    ENet_uint8 channelID;
+    ENet_uint16 reliableSequenceNumber;
+}
+
+struct ENetProtocolAcknowledge @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 receiveReliableSequenceNumber;
+    ENet_uint16 receivedSentTime;
+}
+
+struct ENetProtocolConnect @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 outgoingPeerID;
+    ENet_uint8  incomingSessionID;
+    ENet_uint8  outgoingSessionID;
+    ENet_uint32 mtu;
+    ENet_uint32 windowSize;
+    ENet_uint32 channelCount;
+    ENet_uint32 incomingBandwidth;
+    ENet_uint32 outgoingBandwidth;
+    ENet_uint32 packetThrottleInterval;
+    ENet_uint32 packetThrottleAcceleration;
+    ENet_uint32 packetThrottleDeceleration;
+    ENet_uint32 connectID;
+    ENet_uint32 data;
+}
+
+struct ENetProtocolVerifyConnect @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 outgoingPeerID;
+    ENet_uint8  incomingSessionID;
+    ENet_uint8  outgoingSessionID;
+    ENet_uint32 mtu;
+    ENet_uint32 windowSize;
+    ENet_uint32 channelCount;
+    ENet_uint32 incomingBandwidth;
+    ENet_uint32 outgoingBandwidth;
+    ENet_uint32 packetThrottleInterval;
+    ENet_uint32 packetThrottleAcceleration;
+    ENet_uint32 packetThrottleDeceleration;
+    ENet_uint32 connectID;
+}
+
+struct ENetProtocolDisconnect @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint32 data;
+}
+
+struct ENetProtocolPing @packed {
+    ENetProtocolCommandHeader header;
+}
+
+struct ENetProtocolSendReliable @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 dataLength;
+}
+
+struct ENetProtocolSendUnreliable @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 nsequencedGroup;
+    ENet_uint16 ataLength;
+}
+
+struct ENetProtocolSendUnsequenced @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 startSequenceNumber;
+    ENet_uint16 dataLength;
+    ENet_uint32 fragmentCount;
+    ENet_uint32 fragmentNumber;
+    ENet_uint32 totalLength;
+    ENet_uint32 fragmentOffset;
+}
+
+struct ENetProtocolSendFragment @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint16 startSequenceNumber;
+    ENet_uint16 dataLength;
+    ENet_uint32 fragmentCount;
+    ENet_uint32 fragmentNumber;
+    ENet_uint32 totalLength;
+    ENet_uint32 fragmentOffset;
+}
+
+struct ENetProtocolBandwidthLimit @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint32 packetThrottleInterval;
+    ENet_uint32 packetThrottleAcceleration;
+    ENet_uint32 packetThrottleDeceleration;
+}
+
+struct ENetProtocolThrottleConfigure @packed {
+    ENetProtocolCommandHeader header;
+    ENet_uint32 packetThrottleInterval;
+    ENet_uint32 packedThrottleAcceleration;
+    ENet_uint32 packetThrottleDeceleration;
+}
+
+union ENetProtocol @packed {
+    ENetProtocolCommandHeader     header;
+    ENetProtocolAcknowledge       acknowledge;
+    ENetProtocolConnect           connect;
+    ENetProtocolVerifyConnect     verifyConnect;
+    ENetProtocolDisconnect        disconnect;
+    ENetProtocolPing              ping;
+    ENetProtocolSendReliable      sendReliable;
+    ENetProtocolSendUnreliable    sendUnreliable;
+    ENetProtocolSendUnsequenced   sendUnsequenced;
+    ENetProtocolSendFragment      sendFragment;
+    ENetProtocolBandwidthLimit    bandwidthLimit;
+    ENetProtocolThrottleConfigure throttleConfigure;
+}
+
+
+// ###############################################################
+//                     --- peers ---
+// ###############################################################
+
+struct ENetPacket {
+    usz                     referenceCount;
+    ENet_uint32             flags;
+    ENet_uint8 *            data;
+    usz                     dataLength;
+    ENetPacketFreeCallback  freeCallback;
+    void *                  userData;
+}
+
+struct ENetAcknowledgement {
+    ENetListNode acknowledgementList;
+    ENet_uint32  sentTime;
+    ENetProtocol command;
+}
+
+struct ENetOutgoingCommand {
+    ENetListNode outgoingCommandList;
+    ENet_uint16  reliableSequenceNumber;
+    ENet_uint16  unreliableSequenceNumber;
+    ENet_uint32  sentTime;
+    ENet_uint32  roundTripTimeout;
+    ENet_uint32  queueTime;
+    ENet_uint32  fragmentOffset;
+    ENet_uint16  fragmentLength;
+    ENet_uint16  sendAttempts;
+    ENetProtocol command;
+    ENetPacket * packet;
+}
+
+struct ENetIncomingCommand {
+    ENetListNode    incomingCommandList;
+    ENet_uint16     reliableSequenceNumber;
+    ENet_uint16     unreliableSequenceNumber;
+    ENetProtocol    command;
+    ENet_uint32     fragmentCount;
+    ENet_uint32     fragmentsRemaining;
+    ENet_uint32 *   fragments;
+    ENetPacket  *   packet;
+}
+
+enum ENetPeerState : const int {
+    PEER_STATE_DISCONNECTED             = 0,
+    PEER_STATE_CONNECTING               = 1,
+    PEER_STATE_ACKNOWLEDGING_CONNECT    = 2,
+    PEER_STATE_CONNECTION_PENDING       = 3,
+    PEER_STATE_CONNECTION_SUCCEEDED     = 4,
+    PEER_STATE_CONNECTED                = 5,
+    PEER_STATE_DISCONNECT_LATER         = 6,
+    PEER_STATE_DISCONNECTING            = 7,
+    PEER_STATE_ACKNOWLEDGING_DISCONNECT = 8,
+    PEER_STATE_ZOMBIE                   = 9
+}
+
+const HOST_RECEIVE_BUFFER_SIZE          = 256 * 1024;
+const HOST_SEND_BUFFER_SIZE             = 256 * 1024;
+const HOST_BANDWIDTH_THROTTLE_INTERVAL  = 1000;
+const HOST_DEFAULT_MTU                  = 1392;
+const HOST_DEFAULT_MAXIMUM_PACKET_SIZE  = 32 * 1024 * 1024;
+const HOST_DEFAULT_MAXIMUM_WAITING_DATA = 32 * 1024 * 1024;
+ 
+const PEER_DEFAULT_ROUND_TRIP_TIME      = 500;
+const PEER_DEFAULT_PACKET_THROTTLE      = 32;
+const PEER_PACKET_THROTTLE_SCALE        = 32;
+const PEER_PACKET_THROTTLE_COUNTER      = 7;
+const PEER_PACKET_THROTTLE_ACCELERATION = 2;
+const PEER_PACKET_THROTTLE_DECELERATION = 2;
+const PEER_PACKET_THROTTLE_INTERVAL     = 5000;
+const PEER_PACKET_LOSS_SCALE            = (1 << 16);
+const PEER_PACKET_LOSS_INTERVAL         = 10000;
+const PEER_WINDOW_SIZE_SCALE            = 64 * 1024;
+const PEER_TIMEOUT_LIMIT                = 32;
+const PEER_TIMEOUT_MINIMUM              = 5000;
+const PEER_TIMEOUT_MAXIMUM              = 30000;
+const PEER_PING_INTERVAL                = 500;
+const PEER_UNSEQUENCED_WINDOWS          = 64;
+const PEER_UNSEQUENCED_WINDOW_SIZE      = 1024;
+const PEER_FREE_UNSEQUENCED_WINDOWS     = 32;
+const PEER_RELIABLE_WINDOWS             = 16;
+const PEER_RELIABLE_WINDOW_SIZE         = 0x1000;
+const PEER_FREE_RELIABLE_WINDOWS        = 8;
+
+struct ENetChannel {
+    ENet_uint16 outgoingReliableSequenceNumber;
+    ENet_uint16 outgoingUnreliableSequenceNumber;
+    ENet_uint16 usedReliableWindows;
+    ENet_uint16 [PEER_RELIABLE_WINDOWS]reliableWindows;
+    ENet_uint16 incomingReliableSequenceNumber;
+    ENet_uint16 incomingUnreliableSequenceNumber;
+    ENetList    incomingReliableCommands;
+    ENetList    incomingUnreliableCommands;
+}
+
+enum ENetPeerFlag : const int {
+    PEER_FLAG_NEEDS_DISPATCH            = (1 << 0),
+    PEER_FLAG_CONTINUE_SENDING          = (1 << 1)
+}
+
+struct ENetPeer {
+    ENetListNode  dispatchList;
+    ENetHost *    host;
+    ENet_uint16   outgoingPeerID;
+    ENet_uint16   ingoingPeerID;
+    ENet_uint32   connectID;
+    ENet_uint8    outgoingSessionID;
+    ENet_uint8    incomingSessionID;
+    ENetAddress   address;
+    void*         data;
+    ENetPeerState state;
+    ENetChannel * channels;
+    usz           channelCount;
+    ENet_uint32   incomingBandwidth;
+    ENet_uint32   outgoingBandwidth; 
+    ENet_uint32   incomingBandwidthThrottleEpoch;
+    ENet_uint32   outgoingBandwidthThrottleEpoch;
+    ENet_uint32   incomingDataTotal;
+    ENet_uint64   totalDataReceived;
+    ENet_uint32   outgoingDataTotal;
+    ENet_uint64   totalDataSent;
+    ENet_uint32   lastSendTime;
+    ENet_uint32   lastReceiveTime;
+    ENet_uint32   nextTimeout;
+    ENet_uint32   earliestTimeout;
+    ENet_uint32   packetLossEpoch;
+    ENet_uint32   packetsSent;
+    ENet_uint64   totalPacketsSent; 
+    ENet_uint32   packetsLost;
+    ENet_uint32   totalPacketsLost; 
+    ENet_uint32   packetLoss; 
+    ENet_uint32   packetLossVariance;
+    ENet_uint32   packetThrottle;
+    ENet_uint32   packetThrottleLimit;
+    ENet_uint32   packetThrottleCounter;
+    ENet_uint32   packetThrottleEpoch;
+    ENet_uint32   packetThrottleAcceleration;
+    ENet_uint32   packetThrottleDeceleration;
+    ENet_uint32   packetThrottleInterval;
+    ENet_uint32   pingInterval;
+    ENet_uint32   timeoutLimit;
+    ENet_uint32   timeoutMinimum;
+    ENet_uint32   timeoutMaximum;
+    ENet_uint32   lastRoundTripTime;
+    ENet_uint32   lowestRoundTripTime;
+    ENet_uint32   lastRoundTripTimeVariance;
+    ENet_uint32   highestRoundTripTimeVariance;
+    ENet_uint32   roundTripTime; 
+    ENet_uint32   roundTripTimeVariance;
+    ENet_uint32   mtu;
+    ENet_uint32   windowSize;
+    ENet_uint32   reliableDataInTransit;
+    ENet_uint16   outgoingReliableSequenceNumber;
+    ENetList      acknowledgements;
+    ENetList      sentReliableCommands;
+    ENetList      outgoingCommands;
+    ENetList      outgoingSendReliableCommands;
+    ENetList      dispatchedCommands;
+    ENet_uint16   flags;
+    ENet_uint16   reserved;
+    ENet_uint16   incomingUnsequencedGroup;
+    ENet_uint16   outgoingUnsequencedGroup;
+    ENet_uint32   [PEER_UNSEQUENCED_WINDOW_SIZE / 32]unsequencedWindow;
+    ENet_uint32   eventData;
+    usz           totalWaitingData;
+}
+
+struct ENetHost {
+    ENetSocket            socket;
+    ENetAddress           address; 
+    ENet_uint32           incomingBandwidth; 
+    ENet_uint32           outgoingBandwidth;
+    ENet_uint32           bandwidthThrottleEpoch;
+    ENet_uint32           mtu;
+    ENet_uint32           randomSeed;
+    int                   recalculateBandwidthLimits;
+    ENetPeer *            peers;
+    usz                   peerCount; 
+    usz                   channelLimit;
+    ENet_uint32           serviceTime;
+    ENetList              dispatchQueue;
+    ENet_uint32           totalQueued;
+    usz                   packetSize;
+    ENet_uint16           headerFlags;
+    ENetProtocol          [PROTOCOL_MAXIMUM_PACKET_COMMANDS] commands;
+    usz                   commandCount;
+    ENetBuffer            [BUFFER_MAXIMUM] buffers;
+    usz                   bufferCount;
+    ENetChecksumCallback  checksum;
+    ENetCompressor        compressor;
+    ENet_uint8            [2][PROTOCOL_MAXIMUM_MTU] packetData;
+    ENetAddress           receivedAddress;
+    ENet_uint8 *          receivedData;
+    usz                   receivedDataLength;
+    ENet_uint32           totalSentData; 
+    ENet_uint32           totalSentPackets;
+    ENet_uint32           totalReceivedData; 
+    ENet_uint32           totalReceivedPackets;
+    ENetInterceptCallback intercept;          
+    usz                   connectedPeers;
+    usz                   bandwidthLimitedPeers;
+    usz                   duplicatePeers;    
+    usz                   maximumPacketSize;
+    usz                   maximumWaitingData;
+}
