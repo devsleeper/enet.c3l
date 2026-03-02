@@ -43,7 +43,7 @@ fn int main(String[] args) {
     while (enet::host_service(server, &event, 5000)) {
 
         switch (event.type) {
-            case EVENT_TYPE_CONNECT:
+            case ENetEventType.CONNECT:
                 io::printfn("A new client connected from %s:%d.",  event.peer.address.host, 
                                                                    event.peer.address.port);
 
@@ -51,7 +51,7 @@ fn int main(String[] args) {
                 event.peer.data = "Client information";
                 break;
 
-            case EVENT_TYPE_RECEIVE:
+            case ENetEventType.RECEIVE:
                 io::printf("A packet of length %d containing %s was received from %s on channel %d.\n",
                         event.packet.dataLength,
                         event.packet.data,
@@ -62,22 +62,22 @@ fn int main(String[] args) {
                 enet::packet_destroy (event.packet);
                 break;
 
-            case EVENT_TYPE_DISCONNECT:
+            case ENetEventType.DISCONNECT:
 
                 io::printfn("%s disconnected.", event.peer.data);
                 /* Reset the peer's client information. */
                 event.peer.data = null;
                 break;
 
-            case EVENT_TYPE_DISCONNECT_TIMEOUT:
+            case ENetEventType.DISCONNECT_TIMEOUT:
 
                 io::printfn("%s disconnected due to timeout.", event.peer.data);
                 /* Reset the peer's client information. */
                 event.peer.data = null;
                 break;
 
-            case EVENT_TYPE_NONE:
-                io::printfn("EVENT_TYPE_NONE");
+            case ENetEventType.NONE:
+                io::printfn("EventType.NONE");
                 break;
         }
     }
