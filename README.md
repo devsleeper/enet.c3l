@@ -5,8 +5,6 @@
 import std;
 import std::io;
 import enet;
-import std::thread;
-import std::time;
 
 const int MAX_CLIENTS = 32;
 
