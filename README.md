@@ -21,7 +21,7 @@ fn int main(String[] args) {
     ENetAddress address = {};
 
     address.host = enet::HOST_ANY; /* Bind the server to the default localhost. */
-    address.port = 27000;          /* Bind the server to port 7777              */
+    address.port = 7777;          /* Bind the server to port 7777              */
 
     /* create a server */
     ENetHost * server = enet::host_create(&address, MAX_CLIENTS, 2, 0, 0);
