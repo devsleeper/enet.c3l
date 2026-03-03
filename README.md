@@ -39,8 +39,8 @@ fn int main(String[] args) {
     ENetEvent event;
 
 
-    /* Wait up to 1000 milliseconds for an event. (WARNING: blocking) */
-    while (enet::host_service(server, &event, 5000)) {
+    /* Wait up to 3000 milliseconds for an event. (WARNING: blocking) */
+    while (enet::host_service(server, &event, 3000)) {
 
         switch (event.type) {
             case ENetEventType.CONNECT:

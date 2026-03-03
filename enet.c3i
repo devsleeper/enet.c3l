@@ -135,19 +135,19 @@ fn void peer_disconnect         (ENetPeer * peer, ENet_uint32 data)             
 fn void peer_disconnect_now     (ENetPeer * peer, ENet_uint32 data)                                                         @extern("enet_peer_disconnect_now");
 fn void peer_disconnect_later   (ENetPeer * peer, ENet_uint32 data)                                                         @extern("enet_peer_disconnect_later");
 fn void peer_throttle_configure (ENetPeer * peer, ENet_uint32 interval, ENet_uint32 acceleration, ENet_uint32 deceleration) @extern("enet_peer_throttle_configure");
-fn int peer_throttle                                (ENetPeer * peer, ENet_uint32 rtt)               @extern("enet_peer_throttle");
-fn void peer_reset_queues                           (ENetPeer * peer)                                @extern("enet_peer_reset_queues");
-fn int peer_has_outgoing_commands                   (ENetPeer * peer)                                @extern("enet_peer_has_outgoing_commands");
-fn void peer_setup_outgoing_command                 (ENetPeer * peer, ENetOutgoingCommand * command) @extern("enet_peer_setup_outgoing_command");
-fn ENetOutgoingCommand * peer_queue_outgoing_command(ENetPeer * peer, ENetProtocol * command, ENetPacket * packet, ENet_uint32 offset, ENet_uint16 len) @extern("enet_peer_queue_outgoing_command");
-fn ENetIncomingCommand * peer_queue_incoming_command(ENetPeer * peer, ENetProtocol * command, void * data, usz dataLength, ENet_uint32 flags, ENet_uint32 fragmentCount) @extern("enet_peer_queue_incoming_command");
-fn ENetAcknowledgement * peer_queue_acknowledgement (ENetPeer * peer, ENetProtocol * command, ENet_uint16 sentTime) @extern("enet_peer_queue_acknowledgement");
-fn void peer_dispatch_incoming_unreliable_commands  (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("peer_dispatch_incoming_unreliable_commands");
-fn void peer_dispatch_incoming_reliable_commands    (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("enet_peer_dispatch_incoming_reliable_commands");
-fn void peer_on_connect                             (ENetPeer * peer) @extern("enet_peer_on_connect");
-fn void peer_on_disconnect                          (ENetPeer * peer) @extern("enet_peer_on_disconnect");
+fn int peer_throttle                                 (ENetPeer * peer, ENet_uint32 rtt)               @extern("enet_peer_throttle");
+fn void peer_reset_queues                            (ENetPeer * peer)                                @extern("enet_peer_reset_queues");
+fn int peer_has_outgoing_commands                    (ENetPeer * peer)                                @extern("enet_peer_has_outgoing_commands");
+fn void peer_setup_outgoing_command                  (ENetPeer * peer, ENetOutgoingCommand * command) @extern("enet_peer_setup_outgoing_command");
+fn ENetOutgoingCommand * peer_queue_outgoing_command (ENetPeer * peer, ENetProtocol * command, ENetPacket * packet, ENet_uint32 offset, ENet_uint16 len) @extern("enet_peer_queue_outgoing_command");
+fn ENetIncomingCommand * peer_queue_incoming_command (ENetPeer * peer, ENetProtocol * command, void * data, usz dataLength, ENet_uint32 flags, ENet_uint32 fragmentCount) @extern("enet_peer_queue_incoming_command");
+fn ENetAcknowledgement * peer_queue_acknowledgement  (ENetPeer * peer, ENetProtocol * command, ENet_uint16 sentTime) @extern("enet_peer_queue_acknowledgement");
+fn void peer_dispatch_incoming_unreliable_commands   (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("peer_dispatch_incoming_unreliable_commands");
+fn void peer_dispatch_incoming_reliable_commands     (ENetPeer * peer, ENetChannel * channel, ENetIncomingCommand * queuedCommand) @extern("enet_peer_dispatch_incoming_reliable_commands");
+fn void peer_on_connect                              (ENetPeer * peer) @extern("enet_peer_on_connect");
+fn void peer_on_disconnect                           (ENetPeer * peer) @extern("enet_peer_on_disconnect");
 
-fn usz protocol_command_size                        (ENet_uint8 commandNumber) @extern("enet_protocol_command_size");
+fn usz protocol_command_size                         (ENet_uint8 commandNumber) @extern("enet_protocol_command_size");
 
 fn void*       packet_get_data         (ENetPacket * packet)                                           @extern("enet_packet_get_data");
 fn ENet_uint32 packet_get_length       (ENetPacket * packet)                                           @extern("enet_packet_get_length");
@@ -300,32 +300,32 @@ alias MAXIMUM_PEER_ID @if (!USE_MORE_PEERS) = MAX_PEER_ID_DEFAULT;
 module enet @if(USE_MORE_PEERS);
 enum ENetProtocolFlag : const uint {
 
-    PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE = (1 << 7),
-    PROTOCOL_COMMAND_FLAG_UNSEQUENCED = (1 << 6),
+    ACKNOWLEDGE = (1 << 7),
+    UNSEQUENCED = (1 << 6),
 
-    PROTOCOL_HEADER_FLAG_PEER_EXTRA = (1 << 13),
-    PROTOCOL_HEADER_FLAG_COMPRESSED = (1 << 14),
-    PROTOCOL_HEADER_FLAG_SENT_TIME  = (1 << 15),
-    PROTOCOL_HEADER_FLAG_MASK       = PROTOCOL_HEADER_FLAG_PEER_EXTRA | 
-                                      PROTOCOL_HEADER_FLAG_COMPRESSED | 
-                                      PROTOCOL_HEADER_FLAG_SENT_TIME,
-    PROTOCOL_HEADER_SESSION_MASK    = (3 << 11),
-    PROTOCOL_HEADER_SESSION_SHIFT   = 11
+    PEER_EXTRA = (1 << 13),
+    COMPRESSED = (1 << 14),
+    SENT_TIME  = (1 << 15),
+    MASK       = PEER_EXTRA | 
+                 COMPRESSED | 
+                 SENT_TIME,
+    SESSION_MASK    = (3 << 11),
+    SESSION_SHIFT   = 11
 
 }
 
 module enet @if(!USE_MORE_PEERS);
 enum ENetProtocolFlag : const uint  {
 
-    PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE = (1 << 7),
-    PROTOCOL_COMMAND_FLAG_UNSEQUENCED = (1 << 6),
+    ACKNOWLEDGE = (1 << 7),
+    UNSEQUENCED = (1 << 6),
 
-    PROTOCOL_HEADER_FLAG_COMPRESSED = (1 << 14),
-    PROTOCOL_HEADER_FLAG_SENT_TIME  = (1 << 15),
-    PROTOCOL_HEADER_FLAG_MASK       = (1 << 14) | 
-                                      (1 << 15),
-    PROTOCOL_HEADER_SESSION_MASK    = (3 << 12),
-    PROTOCOL_HEADER_SESSION_SHIFT   = 12
+    COMPRESSED = (1 << 14),
+    SENT_TIME  = (1 << 15),
+    MASK       = (1 << 14) | 
+                      (1 << 15),
+    SESSION_MASK    = (3 << 12),
+    SESSION_SHIFT   = 12
 
 }
 module enet;
@@ -500,16 +500,16 @@ struct ENetIncomingCommand {
 }
 
 enum ENetPeerState : const int {
-    PEER_STATE_DISCONNECTED             = 0,
-    PEER_STATE_CONNECTING               = 1,
-    PEER_STATE_ACKNOWLEDGING_CONNECT    = 2,
-    PEER_STATE_CONNECTION_PENDING       = 3,
-    PEER_STATE_CONNECTION_SUCCEEDED     = 4,
-    PEER_STATE_CONNECTED                = 5,
-    PEER_STATE_DISCONNECT_LATER         = 6,
-    PEER_STATE_DISCONNECTING            = 7,
-    PEER_STATE_ACKNOWLEDGING_DISCONNECT = 8,
-    PEER_STATE_ZOMBIE                   = 9
+    DISCONNECTED             = 0,
+    CONNECTING               = 1,
+    ACKNOWLEDGING_CONNECT    = 2,
+    CONNECTION_PENDING       = 3,
+    CONNECTION_SUCCEEDED     = 4,
+    CONNECTED                = 5,
+    DISCONNECT_LATER         = 6,
+    DISCONNECTING            = 7,
+    ACKNOWLEDGING_DISCONNECT = 8,
+    ZOMBIE                   = 9
 }
 
 const HOST_RECEIVE_BUFFER_SIZE          = 256 * 1024;
